@@ -1,24 +1,16 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
-import fetch from 'node-fetch';
 import docsMap from './docs-map';
+import { load } from './load';
+import { enhance } from './enhance';
+import { save } from './save';
 
 console.log('updating...');
 
-const chakraBaseUrl =
-  'https://raw.githubusercontent.com/chakra-ui/chakra-ui/main';
-
 const update = async () => {
-  await Promise.all(
-    docsMap.map(async (doc) => {
-      try {
-        const response = await fetch(`${chakraBaseUrl}${doc.chakra}`);
-        console.log(await response.text());
-      } catch (error) {
-        console.log(error.response.body);
-      }
-    })
-  );
+  const docs = await load(docsMap);
+  const enhanced = await enhance(docs);
+  await save(enhanced);
 };
 
 update().then(() => console.log('updated!'));
