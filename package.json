@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "type-check": "tsc --noEmit",
+    "build": "npm run build:types && npm run build:js",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
+    "update": "npm run build:js && node dist/update.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +19,23 @@
   "bugs": {
     "url": "https://github.com/divriots/starter-chackra-ui-update/issues"
   },
-  "homepage": "https://github.com/divriots/starter-chackra-ui-update#readme"
+  "homepage": "https://github.com/divriots/starter-chackra-ui-update#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.13.10",
+    "@babel/core": "^7.13.10",
+    "@babel/plugin-proposal-class-properties": "^7.13.0",
+    "@babel/plugin-transform-async-to-generator": "^7.13.0",
+    "@babel/preset-env": "^7.13.12",
+    "@babel/preset-typescript": "^7.13.0",
+    "@types/core-js": "^2.5.4",
+    "@types/node-fetch": "^2.5.8",
+    "@types/regenerator-runtime": "^0.13.0",
+    "prettier": "latest",
+    "typescript": "^4.2.3"
+  },
+  "dependencies": {
+    "core-js": "^3.9.1",
+    "node-fetch": "^2.6.1",
+    "regenerator-runtime": "^0.13.7"
+  }
 }
