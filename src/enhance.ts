@@ -24,6 +24,43 @@ const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
 const reactImportTemplate = `import { $components } from "@chakra-ui/react";`;
 const mdImportTemplate = `import { $components } from "react-icons/md";`;
 const faImportTemplate = `import { $components } from "react-icons/fa";`;
+const spinnerImportTemplate = `import { $components } from "react-spinners";`;
+
+const specificReactComponents = new Set<string>(['AlertIcon']);
+const specificIconComponents = new Set<string>([]);
+const specificFaComponents = new Set<string>([]);
+const specificMdComponents = new Set<string>([]);
+const specificSpinnerComponents = new Set<string>([]);
+
+const isIconImport = (name: string) =>
+  name.endsWith('Icon') &&
+  !specificSpinnerComponents.has(name) &&
+  !specificReactComponents.has(name) &&
+  !specificFaComponents.has(name) &&
+  !specificMdComponents.has(name);
+
+const isMdImport = (name: string) =>
+  name.startsWith('Md') &&
+  !specificSpinnerComponents.has(name) &&
+  !specificReactComponents.has(name) &&
+  !specificFaComponents.has(name) &&
+  !specificIconComponents.has(name);
+
+const isFaImport = (name: string) =>
+  name.startsWith('Fa') &&
+  !specificSpinnerComponents.has(name) &&
+  !specificReactComponents.has(name) &&
+  !specificMdComponents.has(name) &&
+  !specificIconComponents.has(name);
+
+const isSpinnerImport = (name: string) =>
+  name.endsWith('Loader') &&
+  !specificReactComponents.has(name) &&
+  !specificFaComponents.has(name) &&
+  !specificMdComponents.has(name) &&
+  !specificIconComponents.has(name);
+
+const isReactImport = (name: string) => true;
 
 const createImportStatement = (
   componentSet: Set<string>,
@@ -40,6 +77,7 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   const faImports = new Set<string>();
   const iconImports = new Set<string>();
   const reactImports = new Set<string>();
+  const spinnerImports = new Set<string>();
 
   const enhanced = chakraDoc.replaceAll(codeRegex, (_, codeBlock) => {
     const components: string[] = uniq(
@@ -49,10 +87,11 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
     );
 
     components.forEach((c) => {
-      if (c.startsWith('Fa')) faImports.add(c);
-      else if (c.startsWith('Md')) mdImports.add(c);
-      else if (c.endsWith('Icon')) iconImports.add(c);
-      else reactImports.add(c);
+      if (isFaImport(c)) faImports.add(c);
+      else if (isMdImport(c)) mdImports.add(c);
+      else if (isIconImport(c)) iconImports.add(c);
+      else if (isSpinnerImport(c)) spinnerImports.add(c);
+      else if (isReactImport(c)) reactImports.add(c);
     });
 
     return playgroundTemplate
@@ -64,6 +103,7 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
 ${createImportStatement(mdImports, mdImportTemplate)}
 ${createImportStatement(iconImports, iconsImportTemplate)}
 ${createImportStatement(reactImports, reactImportTemplate)}
+${createImportStatement(spinnerImports, spinnerImportTemplate)}
 ${importHeaders}\n${enhanced}`.trim();
 
   return Promise.resolve(doc);
