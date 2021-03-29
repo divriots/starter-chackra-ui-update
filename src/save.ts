@@ -6,11 +6,14 @@ import path from 'path';
 
 const basePath = '../starter-chakra-ui/';
 
-const docPath = '/doc/index.mdx';
+const docDir = '/doc';
+const docName = 'index.mdx';
 
 const saveDoc = async (doc: Doc): Promise<boolean> => {
   try {
-    await fs.writeFile(path.join(basePath, doc.dsd, docPath), doc.dsdDoc || '');
+    const docPath = path.join(basePath, doc.dsd, docDir);
+    await fs.mkdir(docPath, { recursive: true });
+    await fs.writeFile(path.join(docPath, docName), doc.dsdDoc || '');
     return true;
   } catch (error) {
     console.log('error saving doc', doc.chakra, error);
