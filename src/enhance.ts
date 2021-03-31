@@ -94,7 +94,7 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
     const components: string[] = uniq(
       [...codeBlock.matchAll(componentsRegex)].map(
         ([_, component]) => component
-      ).filter(component => !ignoredComponentList.includes(component))
+      )
     );
 
     components.forEach((c) => {
