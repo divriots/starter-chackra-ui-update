@@ -16,7 +16,7 @@ code={\`
 $code\`}
 />`;
 
-const headerRegex = /---[^]*?(---)/gms;
+const headerRegex = /---[^]*?(---)/;
 const componentNameRegex = /(?<=title:).*/g;
 const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
 const codeRegex = /```tsx|```jsx\n(.+?)```/gms;
