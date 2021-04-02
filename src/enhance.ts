@@ -16,6 +16,9 @@ code={\`
 $code\`}
 />`;
 
+const headerRegex = /---[^]*?(---)/;
+const componentNameRegex = /(?<=title:).*/g;
+const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
 const codeRegex = /```tsx|```jsx\n(.+?)```/gms;
 const componentsRegex = /<([A-Z][^\s\/>]*)/gm;
 const emptyLineRegex = /^\s*\n/gm;
@@ -31,6 +34,11 @@ const specificIconComponents = new Set<string>([]);
 const specificFaComponents = new Set<string>([]);
 const specificMdComponents = new Set<string>([]);
 const specificSpinnerComponents = new Set<string>([]);
+
+const ignoredComponentList = ['ComponentLinks', 'carbon-ad'];
+const ignoredComponentsRegex = ignoredComponentList.map(
+  name => selfAndNormalClosingTag.replaceAll('$name', name)
+).join('|');
 
 const isIconImport = (name: string) =>
   name.endsWith('Icon') &&
@@ -79,7 +87,10 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   const reactImports = new Set<string>();
   const spinnerImports = new Set<string>();
 
-  const enhanced = chakraDoc.replaceAll(codeRegex, (_, codeBlock) => {
+  const enhanced = chakraDoc.replace(
+    headerRegex, (headerBlock) => headerBlock && `# ${headerBlock.match(componentNameRegex)}`
+  ).replaceAll(new RegExp(ignoredComponentsRegex, 'gmi'), ''
+  ).replaceAll(codeRegex, (_, codeBlock) => {
     const components: string[] = uniq(
       [...codeBlock.matchAll(componentsRegex)].map(
         ([_, component]) => component
