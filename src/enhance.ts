@@ -113,8 +113,7 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
       else if (isMdImport(c)) mdImports.add(c);
       else if (isIconImport(c)) iconImports.add(c);
       else if (isSpinnerImport(c)) spinnerImports.add(c);
-      else if (isChakraImport(c) || isHookImport(c)) reactImports.add(c);
-      else if (isReactImport(c)) reactImports.add(c);
+      else if (isReactImport(c) || isChakraImport(c) || isHookImport(c)) reactImports.add(c);
     });
 
     return playgroundTemplate
