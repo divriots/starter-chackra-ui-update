@@ -22,7 +22,7 @@ const headerRegex = /---[^]*?(---)/;
 const componentNameRegex = /(?<=title:).*/g;
 const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
 const codeRegex = /```tsx|```jsx\n(.+?)```/gms;
-const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|([ ]use[A-Z][^\s\`"(]*)/gm;
+const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|([ ]use[A-Z][^\s\`"(]*)|as={([A-Za-z]*)}/gm;
 const emptyLineRegex = /^\s*\n/gm;
 
 const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
@@ -46,7 +46,8 @@ const ignoredComponentsRegex = ignoredComponentList.map(
 ).join('|');
 
 const isIconImport = (name: string) =>
-  name.endsWith('Icon') &&
+  // 'Icon' and 'ListIcon' must be imported from '@mdx-js/react'
+  name.endsWith('Icon') && !['Icon', 'ListIcon'].includes(name) &&
   !specificSpinnerComponents.has(name) &&
   !specificReactComponents.has(name) &&
   !specificFaComponents.has(name) &&
@@ -75,6 +76,8 @@ const isSpinnerImport = (name: string) =>
 
 const isChakraImport = (name: string) => name === chakraImport;
 
+const isTagImport = (name: string) => name.startsWith('Tag');
+
 const isHookImport = (name: string) => supportedHooksList.includes(name);
 
 const isReactImport = (name: string) => true;
@@ -102,8 +105,8 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   ).replaceAll(codeRegex, (_, codeBlock) => {
     const components: string[] = uniq(
       [...codeBlock.matchAll(componentsRegex)].map(
-        ([_, component, chakraMatch, hookMatch]) => {
-          return component || chakraMatch || hookMatch;
+        ([_, component, chakraMatch, hookMatch, asUsageMatch]) => {
+          return component || chakraMatch || hookMatch || asUsageMatch;
         }
       )
     );
@@ -113,7 +116,8 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
       else if (isMdImport(c)) mdImports.add(c);
       else if (isIconImport(c)) iconImports.add(c);
       else if (isSpinnerImport(c)) spinnerImports.add(c);
-      else if (isReactImport(c) || isChakraImport(c) || isHookImport(c)) reactImports.add(c);
+      else if (isTagImport(c) || isChakraImport(c) || isHookImport(c)
+        || isReactImport(c)) reactImports.add(c);
     });
 
     return playgroundTemplate
