@@ -1,4 +1,5 @@
 export default [
+  { dsd: 'chakra-factory', chakra: '/website/pages/docs/features/chakra-factory.mdx' },
   { dsd: 'button', chakra: '/website/pages/docs/form/button.mdx' },
   { dsd: 'checkbox', chakra: '/website/pages/docs/form/checkbox.mdx' },
   { dsd: 'editable', chakra: '/website/pages/docs/form/editable.mdx' },
