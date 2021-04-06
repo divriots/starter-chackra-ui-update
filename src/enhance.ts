@@ -16,11 +16,13 @@ code={\`
 $code\`}
 />`;
 
+const chakraImport = `chakra`;
+
 const headerRegex = /---[^]*?(---)/;
 const componentNameRegex = /(?<=title:).*/g;
 const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
 const codeRegex = /```tsx|```jsx\n(.+?)```/gms;
-const componentsRegex = /<([A-Z][^\s\/>]*)/gm;
+const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|([ ]use[A-Z][^\s\`"(]*)/gm;
 const emptyLineRegex = /^\s*\n/gm;
 
 const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
@@ -34,6 +36,9 @@ const specificIconComponents = new Set<string>([]);
 const specificFaComponents = new Set<string>([]);
 const specificMdComponents = new Set<string>([]);
 const specificSpinnerComponents = new Set<string>([]);
+
+const supportedHooksList = ['useToken', 'useTheme', 'usePrefersReducedMotion', 'useDisclosure', 'useOutsideClick',
+  'useMediaQuery', 'useDisclosure', ' useControllableProp', 'useControllableState', 'useClipboard', 'useBreakpointValue'];
 
 const ignoredComponentList = ['ComponentLinks', 'carbon-ad'];
 const ignoredComponentsRegex = ignoredComponentList.map(
@@ -68,6 +73,10 @@ const isSpinnerImport = (name: string) =>
   !specificMdComponents.has(name) &&
   !specificIconComponents.has(name);
 
+const isChakraImport = (name: string) => name === chakraImport;
+
+const isHookImport = (name: string) => supportedHooksList.includes(name);
+
 const isReactImport = (name: string) => true;
 
 const createImportStatement = (
@@ -93,7 +102,9 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   ).replaceAll(codeRegex, (_, codeBlock) => {
     const components: string[] = uniq(
       [...codeBlock.matchAll(componentsRegex)].map(
-        ([_, component]) => component
+        ([_, component, chakraMatch, hookMatch]) => {
+          return component || chakraMatch || hookMatch;
+        }
       )
     );
 
@@ -102,7 +113,7 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
       else if (isMdImport(c)) mdImports.add(c);
       else if (isIconImport(c)) iconImports.add(c);
       else if (isSpinnerImport(c)) spinnerImports.add(c);
-      else if (isReactImport(c)) reactImports.add(c);
+      else if (isReactImport(c) || isChakraImport(c) || isHookImport(c)) reactImports.add(c);
     });
 
     return playgroundTemplate
