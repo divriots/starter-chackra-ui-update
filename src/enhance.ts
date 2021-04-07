@@ -22,7 +22,7 @@ const headerRegex = /---[^]*?(---)/;
 const componentNameRegex = /(?<=title:).*/g;
 const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
 const codeRegex = /```tsx|```jsx\n(.+?)```/gms;
-const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|([ ]use[A-Z][^\s\`"(]*)|as={([A-Za-z]*)}/gm;
+const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|[ ](use[A-Z][^\s\`"(]*)|as={([A-Za-z]*)}/gm;
 const emptyLineRegex = /^\s*\n/gm;
 
 const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
