@@ -1,6 +1,6 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
-import { uniq } from 'lodash';
+import { initial, uniq } from 'lodash';
 import { Doc } from './types';
 
 const importHeaders = `import React from 'react';
@@ -23,20 +23,26 @@ const componentNameRegex = /(?<=title:).*/g;
 const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
 const codeRegex = /```tsx|```jsx\n(.+?)```/gms;
 const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|[ ](use[A-Z][^\s\`"(]*)|as={([A-Za-z]*)}/gm;
+const stringManipulationRegex = /(`.*\${.*}.*?`)/gm;
+const interpolatedValueRegex = /\${(.*?)}/gm;
 const emptyLineRegex = /^\s*\n/gm;
 
 const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
 const reactImportTemplate = `import { $components } from "@chakra-ui/react";`;
 const mdImportTemplate = `import { $components } from "react-icons/md";`;
 const faImportTemplate = `import { $components } from "react-icons/fa";`;
+const aiImportTemplate = `import { $components } from "react-icons/ai";`;
 const spinnerImportTemplate = `import { $components } from "react-spinners";`;
 
 const specificReactComponents = new Set<string>(['AlertIcon']);
 const specificIconComponents = new Set<string>([]);
 const specificFaComponents = new Set<string>([]);
 const specificMdComponents = new Set<string>([]);
+const specificAiComponents = new Set<string>([]);
 const specificSpinnerComponents = new Set<string>([]);
 
+// icons that must be imported from '@mdx-js/react', not from "@chakra-ui/icons"
+const exceptionsIcons = ['Icon', 'ListIcon', 'AccordionIcon', 'TagLeftIcon', 'TagRightIcon'];
 const supportedHooksList = ['useToken', 'useTheme', 'usePrefersReducedMotion', 'useDisclosure', 'useOutsideClick',
   'useMediaQuery', 'useDisclosure', ' useControllableProp', 'useControllableState', 'useClipboard', 'useBreakpointValue'];
 
@@ -46,18 +52,26 @@ const ignoredComponentsRegex = ignoredComponentList.map(
 ).join('|');
 
 const isIconImport = (name: string) =>
-  // 'Icon' and 'ListIcon' must be imported from '@mdx-js/react'
-  name.endsWith('Icon') && !['Icon', 'ListIcon'].includes(name) &&
+  name.endsWith('Icon') && !exceptionsIcons.includes(name) &&
   !specificSpinnerComponents.has(name) &&
   !specificReactComponents.has(name) &&
   !specificFaComponents.has(name) &&
-  !specificMdComponents.has(name);
+  !specificMdComponents.has(name) &&
+  !specificAiComponents.has(name);
 
 const isMdImport = (name: string) =>
   name.startsWith('Md') &&
   !specificSpinnerComponents.has(name) &&
   !specificReactComponents.has(name) &&
   !specificFaComponents.has(name) &&
+  !specificIconComponents.has(name) &&
+  !specificAiComponents.has(name);
+
+const isAiImports = (name: string) =>
+  name.startsWith('Ai') &&
+  !specificSpinnerComponents.has(name) &&
+  !specificReactComponents.has(name) &&
+  !specificMdComponents.has(name) &&
   !specificIconComponents.has(name);
 
 const isFaImport = (name: string) =>
@@ -65,14 +79,16 @@ const isFaImport = (name: string) =>
   !specificSpinnerComponents.has(name) &&
   !specificReactComponents.has(name) &&
   !specificMdComponents.has(name) &&
-  !specificIconComponents.has(name);
+  !specificIconComponents.has(name) &&
+  !specificAiComponents.has(name);
 
 const isSpinnerImport = (name: string) =>
   name.endsWith('Loader') &&
   !specificReactComponents.has(name) &&
   !specificFaComponents.has(name) &&
   !specificMdComponents.has(name) &&
-  !specificIconComponents.has(name);
+  !specificIconComponents.has(name) &&
+  !specificAiComponents.has(name);
 
 const isChakraImport = (name: string) => name === chakraImport;
 
@@ -94,6 +110,7 @@ const createImportStatement = (
 
 export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   const mdImports = new Set<string>();
+  const aiImports = new Set<string>();
   const faImports = new Set<string>();
   const iconImports = new Set<string>();
   const reactImports = new Set<string>();
@@ -102,6 +119,16 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   const enhanced = chakraDoc.replace(
     headerRegex, (headerBlock) => headerBlock && `# ${headerBlock.match(componentNameRegex)}`
   ).replaceAll(new RegExp(ignoredComponentsRegex, 'gmi'), ''
+  ).replaceAll(stringManipulationRegex, (_, stringInterpolation) => {
+    if (stringInterpolation) {
+      // used for: `some ${string} interpolation` => 'some ' + string + interpolation'
+      return stringInterpolation
+        .replaceAll('`', '\'')
+        .replaceAll(interpolatedValueRegex, (_: string, match: string) => {
+          return `' + ${match} + '`;
+        });
+    }
+  }
   ).replaceAll(codeRegex, (_, codeBlock) => {
     const components: string[] = uniq(
       [...codeBlock.matchAll(componentsRegex)].map(
@@ -114,6 +141,7 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
     components.forEach((c) => {
       if (isFaImport(c)) faImports.add(c);
       else if (isMdImport(c)) mdImports.add(c);
+      else if (isAiImports(c)) aiImports.add(c);
       else if (isIconImport(c)) iconImports.add(c);
       else if (isSpinnerImport(c)) spinnerImports.add(c);
       else if (isTagImport(c) || isChakraImport(c) || isHookImport(c)
@@ -121,12 +149,13 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
     });
 
     return playgroundTemplate
-      .replace('$code', codeBlock.replaceAll(emptyLineRegex, ''))
+      .replace('$code', codeBlock.replaceAll(emptyLineRegex, '').replaceAll('`', '\\`'))
       .replace('$scope', components.join(', '));
   });
 
   const doc = `${createImportStatement(faImports, faImportTemplate)}
 ${createImportStatement(mdImports, mdImportTemplate)}
+${createImportStatement(aiImports, aiImportTemplate)}  
 ${createImportStatement(iconImports, iconsImportTemplate)}
 ${createImportStatement(reactImports, reactImportTemplate)}
 ${createImportStatement(spinnerImports, spinnerImportTemplate)}
