@@ -34,15 +34,13 @@ const faImportTemplate = `import { $components } from "react-icons/fa";`;
 const aiImportTemplate = `import { $components } from "react-icons/ai";`;
 const spinnerImportTemplate = `import { $components } from "react-spinners";`;
 
-const specificReactComponents = new Set<string>(['AlertIcon']);
+const specificReactComponents = new Set<string>(['AlertIcon', 'Icon', 'ListIcon', 'AccordionIcon', 'TagLeftIcon', 'TagRightIcon']);
 const specificIconComponents = new Set<string>([]);
 const specificFaComponents = new Set<string>([]);
 const specificMdComponents = new Set<string>([]);
 const specificAiComponents = new Set<string>([]);
 const specificSpinnerComponents = new Set<string>([]);
 
-// icons that must be imported from '@mdx-js/react', not from "@chakra-ui/icons"
-const exceptionsIcons = ['Icon', 'ListIcon', 'AccordionIcon', 'TagLeftIcon', 'TagRightIcon'];
 const supportedHooksList = ['useToken', 'useTheme', 'usePrefersReducedMotion', 'useDisclosure', 'useOutsideClick',
   'useMediaQuery', 'useDisclosure', ' useControllableProp', 'useControllableState', 'useClipboard', 'useBreakpointValue'];
 
@@ -52,7 +50,7 @@ const ignoredComponentsRegex = ignoredComponentList.map(
 ).join('|');
 
 const isIconImport = (name: string) =>
-  name.endsWith('Icon') && !exceptionsIcons.includes(name) &&
+  name.endsWith('Icon') &&
   !specificSpinnerComponents.has(name) &&
   !specificReactComponents.has(name) &&
   !specificFaComponents.has(name) &&
@@ -72,6 +70,7 @@ const isAiImports = (name: string) =>
   !specificSpinnerComponents.has(name) &&
   !specificReactComponents.has(name) &&
   !specificMdComponents.has(name) &&
+  !specificFaComponents.has(name) &&
   !specificIconComponents.has(name);
 
 const isFaImport = (name: string) =>
