@@ -120,6 +120,9 @@ const createImportStatement = (
     : '';
 };
 
+const formatH1ComponentTitle = (headerBlock: string) =>
+  headerBlock && `# ${headerBlock.match(componentNameRegex)}`.replaceAll('"', '')
+
 export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   const mdImports = new Set<string>();
   const aiImports = new Set<string>();
@@ -128,8 +131,7 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   const reactImports = new Set<string>();
   const spinnerImports = new Set<string>();
 
-  const enhanced = chakraDoc.replace(
-    headerRegex, (headerBlock) => headerBlock && `# ${headerBlock.match(componentNameRegex)}`
+  const enhanced = chakraDoc.replace(headerRegex, (headerBlock) => formatH1ComponentTitle(headerBlock)
   ).replaceAll(new RegExp(ignoredComponentsRegex, 'gmi'), ''
   ).replaceAll(new RegExp(ignoredChapterListRegex, 'gms'), ''
   ).replaceAll(stringManipulationRegex, (_, stringInterpolation) => {
