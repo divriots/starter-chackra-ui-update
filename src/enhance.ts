@@ -22,6 +22,7 @@ const headerRegex = /---[^]*?(---)/;
 const componentNameRegex = /(?<=title:).*/g;
 const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
 const codeRegex = /```tsx|```jsx\n(.+?)```/gms;
+const chapterSelection = `^\#{$h}.$name(?:(?!\#{$h}).)*(?:(?!\#{$h}).)*`;
 const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|[ ](use[A-Z][^\s\`"(]*)|as={([A-Za-z]*)}/gm;
 const stringManipulationRegex = /(`.*\${.*}.*?`)/gm;
 const interpolatedValueRegex = /\${(.*?)}/gm;
@@ -47,6 +48,18 @@ const supportedHooksList = ['useToken', 'useTheme', 'usePrefersReducedMotion', '
 const ignoredComponentList = ['ComponentLinks', 'carbon-ad'];
 const ignoredComponentsRegex = ignoredComponentList.map(
   name => selfAndNormalClosingTag.replaceAll('$name', name)
+).join('|');
+
+const ignoredChapterList = [
+  { h: 2, name: 'Props' },
+  { h: 3, name: 'Usage with Form Libraries' },
+  { h: 3, name: 'Using the `Icon` component' },
+  { h: 3, name: 'Creating custom tab components' },
+];
+const ignoredChapterListRegex = ignoredChapterList.map(
+  chapter => chapterSelection
+    .replaceAll('$name', chapter.name.trim().replaceAll(' ', '.'))
+    .replaceAll('$h', chapter.h.toString())
 ).join('|');
 
 const isIconImport = (name: string) =>
@@ -118,6 +131,7 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
   const enhanced = chakraDoc.replace(
     headerRegex, (headerBlock) => headerBlock && `# ${headerBlock.match(componentNameRegex)}`
   ).replaceAll(new RegExp(ignoredComponentsRegex, 'gmi'), ''
+  ).replaceAll(new RegExp(ignoredChapterListRegex, 'gms'), ''
   ).replaceAll(stringManipulationRegex, (_, stringInterpolation) => {
     if (stringInterpolation) {
       // used for: `some ${string} interpolation` => 'some ' + string + interpolation'
