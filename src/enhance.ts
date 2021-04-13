@@ -55,6 +55,7 @@ const ignoredChapterList = [
   { h: 3, name: 'Usage with Form Libraries' },
   { h: 3, name: 'Using the `Icon` component' },
   { h: 3, name: 'Creating custom tab components' },
+  { h: 4, name: 'Custom Radio Buttons' },
 ];
 const ignoredChapterListRegex = ignoredChapterList.map(
   chapter => chapterSelection
