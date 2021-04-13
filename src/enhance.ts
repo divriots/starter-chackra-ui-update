@@ -123,22 +123,16 @@ const createImportStatement = (
 
 const createLocalImportStatement = (
   componentsSet: Set<ComponentMeta>,
-): string => {
-  const x = [...componentsSet.values()].map(
-    c => `${localImportTemplate.replace('$name', c.name).replace('$dsd', c.folder)}`
-  ).join('\n');
-
-  console.log(x);
-
-  return x;
-};
+): string => [...componentsSet.values()].map(
+  c => `${localImportTemplate.replace('$name', c.name).replace('$dsd', c.folder)}`
+).join('\n');
 
 const formatH1ComponentTitle = (headerBlock: string) =>
   headerBlock && `# ${headerBlock.match(componentNameRegex)}`.replaceAll('"', '')
 
 export const enhanceDoc = (
   chakraDoc: string = '',
-  localComponents: ComponentMeta[]
+  docsMapMeta: ComponentMeta[]
 ): Promise<string> => {
   const mdImports = new Set<string>();
   const aiImports = new Set<string>();
@@ -171,8 +165,8 @@ export const enhanceDoc = (
     );
 
     components.forEach((c) => {
-      const localComponent = localComponents.find(com => com.name === c);
-      if (localComponent) localImports.add(localComponent);
+      const docMeta = docsMapMeta.find(com => com.name === c);
+      if (docMeta) localImports.add(docMeta);
       else if (isFaImport(c)) faImports.add(c);
       else if (isMdImport(c)) mdImports.add(c);
       else if (isAiImports(c)) aiImports.add(c);
@@ -218,10 +212,10 @@ export const getIndexJsContent = (): string => {
 }
 
 export const enhance = async (docsMap: Doc[]): Promise<Doc[]> => {
-  const localComponents = docsMap.map(d => new ComponentMeta(d.name, d.dsd));
+  const docsMapMeta = docsMap.map(d => new ComponentMeta(d.name, d.dsd));
   return Promise.all(
     docsMap.map(async (doc: Doc) => ({
-      dsdDoc: await enhanceDoc(doc.chakraDoc, localComponents),
+      dsdDoc: await enhanceDoc(doc.chakraDoc, docsMapMeta),
       tsx: getComponentTsxContent(doc.name),
       indexTs: getIndexTsContent(doc.name),
       indexJs: getIndexJsContent(),
