@@ -1,7 +1,7 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import { initial, uniq } from 'lodash';
-import { Doc } from './types';
+import { Doc, ComponentMeta } from './types';
 
 const importHeaders = `import React from 'react';
 import { mdx } from '@mdx-js/react';
@@ -28,6 +28,7 @@ const stringManipulationRegex = /(`.*\${.*}.*?`)/gm;
 const interpolatedValueRegex = /\${(.*?)}/gm;
 const emptyLineRegex = /^\s*\n/gm;
 
+const localImportTemplate = `import $name from "~/$dsd";`;
 const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
 const reactImportTemplate = `import { $components } from "@chakra-ui/react";`;
 const mdImportTemplate = `import { $components } from "react-icons/md";`;
@@ -120,16 +121,32 @@ const createImportStatement = (
     : '';
 };
 
+const createLocalImportStatement = (
+  componentsSet: Set<ComponentMeta>,
+): string => {
+  const x = [...componentsSet.values()].map(
+    c => `${localImportTemplate.replace('$name', c.name).replace('$dsd', c.folder)}`
+  ).join('\n');
+
+  console.log(x);
+
+  return x;
+};
+
 const formatH1ComponentTitle = (headerBlock: string) =>
   headerBlock && `# ${headerBlock.match(componentNameRegex)}`.replaceAll('"', '')
 
-export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
+export const enhanceDoc = (
+  chakraDoc: string = '',
+  localComponents: ComponentMeta[]
+): Promise<string> => {
   const mdImports = new Set<string>();
   const aiImports = new Set<string>();
   const faImports = new Set<string>();
   const iconImports = new Set<string>();
   const reactImports = new Set<string>();
   const spinnerImports = new Set<string>();
+  const localImports = new Set<ComponentMeta>();
 
   const enhanced = chakraDoc.replace(headerRegex, (headerBlock) => formatH1ComponentTitle(headerBlock)
   ).replaceAll(new RegExp(ignoredComponentsRegex, 'gmi'), ''
@@ -154,7 +171,9 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
     );
 
     components.forEach((c) => {
-      if (isFaImport(c)) faImports.add(c);
+      const localComponent = localComponents.find(com => com.name === c);
+      if (localComponent) localImports.add(localComponent);
+      else if (isFaImport(c)) faImports.add(c);
       else if (isMdImport(c)) mdImports.add(c);
       else if (isAiImports(c)) aiImports.add(c);
       else if (isIconImport(c)) iconImports.add(c);
@@ -173,16 +192,40 @@ ${createImportStatement(mdImports, mdImportTemplate)}
 ${createImportStatement(aiImports, aiImportTemplate)}  
 ${createImportStatement(iconImports, iconsImportTemplate)}
 ${createImportStatement(reactImports, reactImportTemplate)}
+${createLocalImportStatement(localImports)}
 ${createImportStatement(spinnerImports, spinnerImportTemplate)}
 ${importHeaders}\n${enhanced}`.trim();
 
   return Promise.resolve(doc);
 };
 
-export const enhance = async (docsMap: Doc[]): Promise<Doc[]> =>
-  Promise.all(
+// /src/[name].tsx
+export const getComponentTsxContent = (name: string = ''): string => {
+  const doc = `export { ${name} } from '@chakra-ui/react';`;
+  return doc;
+}
+
+// /src/index.ts
+export const getIndexTsContent = (name: string = ''): string => {
+  const doc = `export * from './${name}.tsx';`;
+  return doc;
+}
+
+// /index.js
+export const getIndexJsContent = (): string => {
+  const doc = `export * from './src';`;
+  return doc;
+}
+
+export const enhance = async (docsMap: Doc[]): Promise<Doc[]> => {
+  const localComponents = docsMap.map(d => new ComponentMeta(d.name, d.dsd));
+  return Promise.all(
     docsMap.map(async (doc: Doc) => ({
-      dsdDoc: await enhanceDoc(doc.chakraDoc),
+      dsdDoc: await enhanceDoc(doc.chakraDoc, localComponents),
+      tsx: getComponentTsxContent(doc.name),
+      indexTs: getIndexTsContent(doc.name),
+      indexJs: getIndexJsContent(),
       ...doc,
     }))
   );
+}
