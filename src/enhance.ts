@@ -28,7 +28,7 @@ const stringManipulationRegex = /(`.*\${.*}.*?`)/gm;
 const interpolatedValueRegex = /\${(.*?)}/gm;
 const emptyLineRegex = /^\s*\n/gm;
 
-const localImportTemplate = `import $name from "~/$dsd";`;
+const localImportTemplate = `import { $name } from "~/$dsd";`;
 const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
 const reactImportTemplate = `import { $components } from "@chakra-ui/react";`;
 const mdImportTemplate = `import { $components } from "react-icons/md";`;
