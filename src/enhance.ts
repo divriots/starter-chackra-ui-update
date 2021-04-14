@@ -202,13 +202,13 @@ export const getComponentTsxContent = (name: string = ''): string => {
 
 // /src/index.ts
 export const getIndexTsContent = (name: string = ''): string => {
-  const doc = `export * from './${name}.tsx';`;
+  const doc = `export * from './${name}';`;
   return doc;
 }
 
 // /index.js
 export const getIndexJsContent = (): string => {
-  const doc = `export * from './src';`;
+  const doc = `export * from './src/index';`;
   return doc;
 }
 
