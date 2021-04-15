@@ -1,6 +1,6 @@
-export type Doc = {
-  name: string;
+import { camelCase, capitalize } from "lodash";
 
+export type Doc = {
   dsd: string;
   dsdDoc?: string;
 
@@ -16,8 +16,8 @@ export class ComponentMeta {
   name: string;
   folder: string;
 
-  constructor(name: string, folder: string) {
-    this.name = name;
+  constructor(folder: string) {
+    this.name = capitalize(camelCase(folder));
     this.folder = folder;
   };
 }

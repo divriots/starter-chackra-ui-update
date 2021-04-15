@@ -1,6 +1,6 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
-import { initial, uniq } from 'lodash';
+import { uniq, camelCase, capitalize } from 'lodash';
 import { Doc, ComponentMeta } from './types';
 
 const importHeaders = `import React from 'react';
@@ -194,31 +194,30 @@ ${importHeaders}\n${enhanced}`.trim();
   return Promise.resolve(doc);
 };
 
+const getComponentName = (dsd: string) => capitalize(camelCase(dsd));
+
 // /src/[name].tsx
 export const getComponentTsxContent = (name: string = ''): string => {
-  const doc = `export { ${name} } from '@chakra-ui/react';`;
-  return doc;
+  return `export { ${name} } from '@chakra-ui/react';`;
 }
 
 // /src/index.ts
 export const getIndexTsContent = (name: string = ''): string => {
-  const doc = `export * from './${name}';`;
-  return doc;
+  return `export * from './${name}';`;
 }
 
 // /index.js
 export const getIndexJsContent = (): string => {
-  const doc = `export * from './src/index';`;
-  return doc;
+  return `export * from './src/index';`;
 }
 
 export const enhance = async (docsMap: Doc[]): Promise<Doc[]> => {
-  const docsMapMeta = docsMap.map(d => new ComponentMeta(d.name, d.dsd));
+  const docsMapMeta = docsMap.map(d => new ComponentMeta(d.dsd));
   return Promise.all(
     docsMap.map(async (doc: Doc) => ({
       dsdDoc: await enhanceDoc(doc.chakraDoc, docsMapMeta),
-      tsx: getComponentTsxContent(doc.name),
-      indexTs: getIndexTsContent(doc.name),
+      tsx: getComponentTsxContent(getComponentName(doc.dsd)),
+      indexTs: getIndexTsContent(getComponentName(doc.dsd)),
       indexJs: getIndexJsContent(),
       ...doc,
     }))
