@@ -1,7 +1,8 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
-import { uniq, camelCase, capitalize } from 'lodash';
+import { uniq } from 'lodash';
 import { Doc, ComponentMeta } from './types';
+import { generateFilename } from './utils';
 
 const importHeaders = `import React from 'react';
 import { mdx } from '@mdx-js/react';
@@ -125,7 +126,9 @@ const createImportStatement = (
 const createLocalImportStatement = (
   componentsSet: Set<ComponentMeta>,
 ): string => [...componentsSet.values()].map(
-  c => `${localImportTemplate.replace('$name', c.name).replace('$dsd', c.folder)}`
+  c => `${localImportTemplate
+    .replace('$name', c.name)
+    .replace('$dsd', c.folder)}`
 ).join('\n');
 
 const formatH1ComponentTitle = (headerBlock: string) =>
@@ -194,8 +197,6 @@ ${importHeaders}\n${enhanced}`.trim();
   return Promise.resolve(doc);
 };
 
-const getComponentName = (dsd: string) => capitalize(camelCase(dsd));
-
 // /src/[name].tsx
 export const getComponentTsxContent = (name: string = ''): string => {
   return `export { ${name} } from '@chakra-ui/react';`;
@@ -216,8 +217,8 @@ export const enhance = async (docsMap: Doc[]): Promise<Doc[]> => {
   return Promise.all(
     docsMap.map(async (doc: Doc) => ({
       dsdDoc: await enhanceDoc(doc.chakraDoc, docsMapMeta),
-      tsx: getComponentTsxContent(getComponentName(doc.dsd)),
-      indexTs: getIndexTsContent(getComponentName(doc.dsd)),
+      tsx: getComponentTsxContent(generateFilename(doc.dsd)),
+      indexTs: getIndexTsContent(generateFilename(doc.dsd)),
       indexJs: getIndexJsContent(),
       ...doc,
     }))

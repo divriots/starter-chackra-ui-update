@@ -1,4 +1,4 @@
-import { camelCase, capitalize } from "lodash";
+import { generateFilename } from "./utils";
 
 export type Doc = {
   dsd: string;
@@ -17,7 +17,7 @@ export class ComponentMeta {
   folder: string;
 
   constructor(folder: string) {
-    this.name = capitalize(camelCase(folder));
+    this.name = generateFilename(folder);
     this.folder = folder;
   };
 }

@@ -3,7 +3,7 @@ import 'regenerator-runtime/runtime';
 import { promises as fs } from 'fs';
 import { Doc } from './types';
 import path from 'path';
-import { camelCase, capitalize } from 'lodash';
+import { generateFilename } from './utils';
 
 const basePath = '../starter-chakra-ui/';
 
@@ -16,7 +16,7 @@ const saveDoc = async (doc: Doc): Promise<boolean> => {
   try {
     const tsxPath = path.join(basePath, doc.dsd, component.dir);
     await fs.mkdir(tsxPath, { recursive: true });
-    await fs.writeFile(path.join(tsxPath, component.fileName.replace('${name}', capitalize(camelCase(doc.dsd)))), doc.tsx || '');
+    await fs.writeFile(path.join(tsxPath, component.fileName.replace('${name}', generateFilename(doc.dsd))), doc.tsx || '');
 
     const indexTsPath = path.join(basePath, doc.dsd, indexTs.dir);
     await fs.mkdir(indexTsPath, { recursive: true });
