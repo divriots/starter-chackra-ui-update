@@ -12,8 +12,7 @@ export default Layout;
 `;
 
 const playgroundTemplate = `<Playground
-scope={{ $scope }}
-noInline={ $noInline }
+scope={{ $scope }}$noInline
 code={\`
 $code\`}
 />`;
@@ -186,7 +185,7 @@ export const enhanceDoc = (
 
     return playgroundTemplate
       .replace('$code', codeBlock.replaceAll(emptyLineRegex, '').replaceAll('`', '\\`'))
-      .replace('$noInline', `${noInlineProperty}`)
+      .replace('$noInline', noInlineProperty ? `\nnoInline={${noInlineProperty}}` : '')
       .replace('$scope', components.join(', '));
   });
 
