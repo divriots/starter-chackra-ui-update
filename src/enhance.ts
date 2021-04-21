@@ -37,6 +37,7 @@ const mdImportTemplate = `import { $components } from "react-icons/md";`;
 const faImportTemplate = `import { $components } from "react-icons/fa";`;
 const aiImportTemplate = `import { $components } from "react-icons/ai";`;
 const spinnerImportTemplate = `import { $components } from "react-spinners";`;
+const inputInportTemplate = `\nimport { $components} from "@chakra-ui/input";`;
 
 const specificReactComponents = new Set<string>(['AlertIcon', 'Icon', 'ListIcon', 'AccordionIcon', 'TagLeftIcon', 'TagRightIcon']);
 const specificIconComponents = new Set<string>([]);
@@ -107,6 +108,8 @@ const isSpinnerImport = (name: string) =>
   !specificIconComponents.has(name) &&
   !specificAiComponents.has(name);
 
+const isInputImport = (name: string) => name.startsWith('Input');
+
 const isChakraImport = (name: string) => name === chakraImport;
 
 const isTagImport = (name: string) => name.startsWith('Tag');
@@ -146,6 +149,7 @@ export const enhanceDoc = (
   const iconImports = new Set<string>();
   const reactImports = new Set<string>();
   const spinnerImports = new Set<string>();
+  const inputImports = new Set<string>();
   const localImports = new Set<ComponentMeta>();
 
   const enhanced = chakraDoc.replace(headerRegex, (headerBlock) => formatH1ComponentTitle(headerBlock)
@@ -178,6 +182,7 @@ export const enhanceDoc = (
       else if (isMdImport(c)) mdImports.add(c);
       else if (isAiImports(c)) aiImports.add(c);
       else if (isIconImport(c)) iconImports.add(c);
+      else if (isInputImport(c)) inputImports.add(c);
       else if (isSpinnerImport(c)) spinnerImports.add(c);
       else if (isTagImport(c) || isChakraImport(c) || isHookImport(c)
         || isReactImport(c)) reactImports.add(c);
@@ -194,7 +199,7 @@ ${createImportStatement(mdImports, mdImportTemplate)}
 ${createImportStatement(aiImports, aiImportTemplate)}  
 ${createImportStatement(iconImports, iconsImportTemplate)}
 ${createImportStatement(reactImports, reactImportTemplate)}
-${createLocalImportStatement(localImports)}
+${createLocalImportStatement(localImports)}${createImportStatement(inputImports, inputInportTemplate)}
 ${createImportStatement(spinnerImports, spinnerImportTemplate)}
 ${importHeaders}\n${enhanced}`.trim();
 
