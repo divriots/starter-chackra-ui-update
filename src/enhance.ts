@@ -1,7 +1,8 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
-import { initial, uniq } from 'lodash';
-import { Doc } from './types';
+import { uniq } from 'lodash';
+import { Doc, ComponentMeta } from './types';
+import { generateFilename } from './utils';
 
 const importHeaders = `import React from 'react';
 import { mdx } from '@mdx-js/react';
@@ -28,6 +29,7 @@ const stringManipulationRegex = /(`.*\${.*}.*?`)/gm;
 const interpolatedValueRegex = /\${(.*?)}/gm;
 const emptyLineRegex = /^\s*\n/gm;
 
+const localImportTemplate = `import { $name } from "~/$dsd";`;
 const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
 const reactImportTemplate = `import { $components } from "@chakra-ui/react";`;
 const mdImportTemplate = `import { $components } from "react-icons/md";`;
@@ -55,6 +57,7 @@ const ignoredChapterList = [
   { h: 3, name: 'Usage with Form Libraries' },
   { h: 3, name: 'Using the `Icon` component' },
   { h: 3, name: 'Creating custom tab components' },
+  { h: 4, name: 'Custom Radio Buttons' },
 ];
 const ignoredChapterListRegex = ignoredChapterList.map(
   chapter => chapterSelection
@@ -120,16 +123,30 @@ const createImportStatement = (
     : '';
 };
 
-export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
+const createLocalImportStatement = (
+  componentsSet: Set<ComponentMeta>,
+): string => [...componentsSet.values()].map(
+  c => `${localImportTemplate
+    .replace('$name', c.name)
+    .replace('$dsd', c.folder)}`
+).join('\n');
+
+const formatH1ComponentTitle = (headerBlock: string) =>
+  headerBlock && `# ${headerBlock.match(componentNameRegex)}`.replaceAll('"', '')
+
+export const enhanceDoc = (
+  chakraDoc: string = '',
+  docsMapMeta: ComponentMeta[]
+): Promise<string> => {
   const mdImports = new Set<string>();
   const aiImports = new Set<string>();
   const faImports = new Set<string>();
   const iconImports = new Set<string>();
   const reactImports = new Set<string>();
   const spinnerImports = new Set<string>();
+  const localImports = new Set<ComponentMeta>();
 
-  const enhanced = chakraDoc.replace(
-    headerRegex, (headerBlock) => headerBlock && `# ${headerBlock.match(componentNameRegex)}`
+  const enhanced = chakraDoc.replace(headerRegex, (headerBlock) => formatH1ComponentTitle(headerBlock)
   ).replaceAll(new RegExp(ignoredComponentsRegex, 'gmi'), ''
   ).replaceAll(new RegExp(ignoredChapterListRegex, 'gms'), ''
   ).replaceAll(stringManipulationRegex, (_, stringInterpolation) => {
@@ -152,7 +169,9 @@ export const enhanceDoc = (chakraDoc: string = ''): Promise<string> => {
     );
 
     components.forEach((c) => {
-      if (isFaImport(c)) faImports.add(c);
+      const docMeta = docsMapMeta.find(com => com.name === c);
+      if (docMeta) localImports.add(docMeta);
+      else if (isFaImport(c)) faImports.add(c);
       else if (isMdImport(c)) mdImports.add(c);
       else if (isAiImports(c)) aiImports.add(c);
       else if (isIconImport(c)) iconImports.add(c);
@@ -171,16 +190,37 @@ ${createImportStatement(mdImports, mdImportTemplate)}
 ${createImportStatement(aiImports, aiImportTemplate)}  
 ${createImportStatement(iconImports, iconsImportTemplate)}
 ${createImportStatement(reactImports, reactImportTemplate)}
+${createLocalImportStatement(localImports)}
 ${createImportStatement(spinnerImports, spinnerImportTemplate)}
 ${importHeaders}\n${enhanced}`.trim();
 
   return Promise.resolve(doc);
 };
 
-export const enhance = async (docsMap: Doc[]): Promise<Doc[]> =>
-  Promise.all(
+// /src/[name].tsx
+export const getComponentTsxContent = (name: string = ''): string => {
+  return `export { ${name} } from '@chakra-ui/react';`;
+}
+
+// /src/index.ts
+export const getIndexTsContent = (name: string = ''): string => {
+  return `export * from './${name}';`;
+}
+
+// /index.js
+export const getIndexJsContent = (): string => {
+  return `export * from './src/index';`;
+}
+
+export const enhance = async (docsMap: Doc[]): Promise<Doc[]> => {
+  const docsMapMeta = docsMap.map(d => new ComponentMeta(d.dsd));
+  return Promise.all(
     docsMap.map(async (doc: Doc) => ({
-      dsdDoc: await enhanceDoc(doc.chakraDoc),
+      dsdDoc: await enhanceDoc(doc.chakraDoc, docsMapMeta),
+      tsx: getComponentTsxContent(generateFilename(doc.dsd)),
+      indexTs: getIndexTsContent(generateFilename(doc.dsd)),
+      indexJs: getIndexJsContent(),
       ...doc,
     }))
   );
+}
