@@ -23,7 +23,7 @@ const headerRegex = /---[^]*?(---)/;
 const renderRegex = /render\(/;
 const componentNameRegex = /(?<=title:).*/g;
 const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
-const codeRegex = /```tsx|```jsx[^\n]*\n(.+?)```/gms;
+const codeRegex = /```tsx|```jsx[ ^live=true|manual=true]*\n(.+?)```/gms;
 const chapterSelection = `^\#{$h}.$name(?:(?!\#{$h}).)*(?:(?!\#{$h}).)*`;
 const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|[ ](use[A-Z][^\s\`"(]*)|as={([A-Za-z]*)}/gm;
 const stringManipulationRegex = /(`.*\${.*}.*?`)/gm;
