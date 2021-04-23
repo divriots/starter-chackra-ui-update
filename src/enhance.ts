@@ -12,7 +12,7 @@ export default Layout;
 `;
 
 const playgroundTemplate = `<Playground
-scope={{ $scope }}
+scope={{ $scope }}$noInline
 code={\`
 $code\`}
 />`;
@@ -20,9 +20,10 @@ $code\`}
 const chakraImport = `chakra`;
 
 const headerRegex = /---[^]*?(---)/;
+const renderRegex = /render\(/;
 const componentNameRegex = /(?<=title:).*/g;
 const selfAndNormalClosingTag = `<$name[^]*?(\\/>|<\\/$name>)`;
-const codeRegex = /```tsx|```jsx\n(.+?)```/gms;
+const codeRegex = /```tsx|```jsx[ ^live=true|manual=true]*\n(.+?)```/gms;
 const chapterSelection = `^\#{$h}.$name(?:(?!\#{$h}).)*(?:(?!\#{$h}).)*`;
 const componentsRegex = /<([A-Z][^\s\/>]*)|<(chakra)|[ ](use[A-Z][^\s\`"(]*)|as={([A-Za-z]*)}/gm;
 const stringManipulationRegex = /(`.*\${.*}.*?`)/gm;
@@ -62,6 +63,7 @@ const ignoredChapterList = [
 const ignoredChapterListRegex = ignoredChapterList.map(
   chapter => chapterSelection
     .replaceAll('$name', chapter.name.trim().replaceAll(' ', '.'))
+
     .replaceAll('$h', chapter.h.toString())
 ).join('|');
 
@@ -160,6 +162,7 @@ export const enhanceDoc = (
     }
   }
   ).replaceAll(codeRegex, (_, codeBlock) => {
+    const noInlineProperty = !!(`${codeBlock}`.match(renderRegex)?.input);
     const components: string[] = uniq(
       [...codeBlock.matchAll(componentsRegex)].map(
         ([_, component, chakraMatch, hookMatch, asUsageMatch]) => {
@@ -182,6 +185,7 @@ export const enhanceDoc = (
 
     return playgroundTemplate
       .replace('$code', codeBlock.replaceAll(emptyLineRegex, '').replaceAll('`', '\\`'))
+      .replace('$noInline', noInlineProperty ? `\nnoInline={${noInlineProperty}}` : '')
       .replace('$scope', components.join(', '));
   });
 
