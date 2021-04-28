@@ -1,6 +1,6 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
-import { uniq } from 'lodash';
+import { uniq, partition } from 'lodash';
 import { Doc, ComponentMeta } from './types';
 import { generateFilename } from './utils';
 
@@ -206,6 +206,41 @@ ${importHeaders}\n${enhanced}`.trim();
   return Promise.resolve(doc);
 };
 
+const importRegex = /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:"\.\.\/src.*?")|(?:'\.\.\/src.*?'))[\s]*?(?:;|$|)/g;
+const importedComponentsRegex = /{[\s\S]*?}/g;
+const eachComponentRegex = /(,?[\w][\w]*),?/g;
+
+export const enhanceStory = (
+  doc: Doc,
+  docsMapMeta: ComponentMeta[]
+): Promise<string> => {
+  const { dsd, storyDoc } = doc;
+  const componentName = generateFilename(dsd);
+
+  // replace all the import statements that includes the '../src' path
+  const enhancedStory = storyDoc?.replaceAll(importRegex, (importLine, _) => {
+
+    // sample: '{Editable, EditableInput, EditablePreview, useEditableControls}'
+    const allComponentsLine = (importLine.match(importedComponentsRegex) || [])[0];
+    const components = allComponentsLine && [...allComponentsLine.matchAll(eachComponentRegex)]
+      .map(([_, component]) => component);
+
+    const [selfImportComponent, others] = partition(components, (el) => el.trim() === componentName);
+
+    const selfImport = selfImportComponent.length ? `import { ${componentName} } from "../src/index"\n` : '';
+    const reactImport = others.length ? `import { ${others.join(', ')} } from "@chakra-ui/react"\n` : '';
+
+    // const [local, react] = partition(docsMapMeta, (el) => {
+    //   // console.log(generateFilename(el.name), '~~', others.includes(generateFilename(el.name)));
+    //   return others.includes(generateFilename(el.name));
+    // });
+
+    return `${selfImport}${reactImport}`;
+  })
+
+  return Promise.resolve(enhancedStory || '');
+};
+
 // /src/[name].tsx
 export const getComponentTsxContent = (name: string = ''): string => {
   return `export { ${name} } from '@chakra-ui/react';`;
@@ -225,11 +260,12 @@ export const enhance = async (docsMap: Doc[]): Promise<Doc[]> => {
   const docsMapMeta = docsMap.map(d => new ComponentMeta(d.dsd));
   return Promise.all(
     docsMap.map(async (doc: Doc) => ({
+      ...doc,
       dsdDoc: await enhanceDoc(doc.chakraDoc, docsMapMeta),
+      storyDoc: await enhanceStory(doc, docsMapMeta),
       tsx: getComponentTsxContent(generateFilename(doc.dsd)),
       indexTs: getIndexTsContent(generateFilename(doc.dsd)),
       indexJs: getIndexJsContent(),
-      ...doc,
     }))
   );
 }

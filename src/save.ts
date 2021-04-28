@@ -11,6 +11,7 @@ const indexJs = { fileName: 'index.js', dir: '' };
 const indexTs = { fileName: 'index.ts', dir: '/src' };
 const component = { fileName: '${name}.tsx', dir: '/src' };
 const documentation = { fileName: 'index.mdx', dir: '/doc' };
+const stories = { fileName: 'index.stories.tsx', dir: '/stories' };
 
 const saveDoc = async (doc: Doc): Promise<boolean> => {
   try {
@@ -29,6 +30,12 @@ const saveDoc = async (doc: Doc): Promise<boolean> => {
     const docPath = path.join(basePath, doc.dsd, documentation.dir);
     await fs.mkdir(docPath, { recursive: true });
     await fs.writeFile(path.join(docPath, documentation.fileName), doc.dsdDoc || '');
+
+    if (doc.storyDoc) {
+      const storiesPath = path.join(basePath, doc.dsd, stories.dir);
+      await fs.mkdir(storiesPath, { recursive: true });
+      await fs.writeFile(path.join(storiesPath, stories.fileName), doc.storyDoc || '');
+    }
 
     return true;
   } catch (error) {

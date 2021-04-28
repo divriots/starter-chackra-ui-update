@@ -4,6 +4,9 @@ export type Doc = {
   dsd: string;
   dsdDoc?: string;
 
+  story?: string;
+  storyDoc?: string;
+
   chakra: string;
   chakraDoc?: string;
 
