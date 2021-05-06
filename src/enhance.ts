@@ -207,8 +207,14 @@ ${importHeaders}\n${enhanced}`.trim();
 };
 
 const importRegex = /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:"\.\.\/src.*?")|(?:'\.\.\/src.*?'))[\s]*?(?:;|$|)/g;
+const themeDecoratorRegex = /import { themeDecorator } [\s\S]*?(?=;);/g;
+const exportDefaultRegex = /(export default {[\s\S]*?})/g;
+const decoratorsRegex = /(decorators: [\s\S]*?])/g;
 const importedComponentsRegex = /{[\s\S]*?}/g;
 const eachComponentRegex = /(,?[\w][\w]*),?/g;
+
+const importThemeDecoratorLine = 'import { themeDecorator } from "../../story-layout/src/index";'
+const decoratorsLine = 'decorators: [themeDecorator]';
 
 export const enhanceStory = (
   doc: Doc,
@@ -218,25 +224,32 @@ export const enhanceStory = (
   const componentName = generateFilename(dsd);
 
   // replace all the import statements that includes the '../src' path
-  const enhancedStory = storyDoc?.replaceAll(importRegex, (importLine, _) => {
+  const enhancedStory = storyDoc
+    ?.replaceAll(themeDecoratorRegex, '')
+    .replace(decoratorsRegex, decoratorsLine)
+    .replaceAll(importRegex, (importLine, _) => {
 
-    // sample: '{Editable, EditableInput, EditablePreview, useEditableControls}'
-    const allComponentsLine = (importLine.match(importedComponentsRegex) || [])[0];
-    const components = allComponentsLine && [...allComponentsLine.matchAll(eachComponentRegex)]
-      .map(([_, component]) => component);
+      // sample: '{Editable, EditableInput, EditablePreview, useEditableControls}'
+      const allComponentsLine = (importLine.match(importedComponentsRegex) || [])[0];
+      const components = allComponentsLine && [...allComponentsLine.matchAll(eachComponentRegex)]
+        .map(([_, component]) => component);
 
-    const [selfImportComponent, others] = partition(components, (el) => el.trim() === componentName);
+      const [selfImportComponent, others] = partition(components, (el) => el.trim() === componentName);
 
-    const selfImport = selfImportComponent.length ? `import { ${componentName} } from "../src/index"\n` : '';
-    const reactImport = others.length ? `import { ${others.join(', ')} } from "@chakra-ui/react"\n` : '';
+      const selfImport = selfImportComponent.length ? `import { ${componentName} } from "../src/index"\n` : '';
+      const reactImport = others.length ? `import { ${others.join(', ')} } from "@chakra-ui/react"` : '';
 
-    // const [local, react] = partition(docsMapMeta, (el) => {
-    //   // console.log(generateFilename(el.name), '~~', others.includes(generateFilename(el.name)));
-    //   return others.includes(generateFilename(el.name));
-    // });
+      // const [local, react] = partition(docsMapMeta, (el) => {
+      //   // console.log(generateFilename(el.name), '~~', others.includes(generateFilename(el.name)));
+      //   return others.includes(generateFilename(el.name));
+      // });
 
-    return `${selfImport}${reactImport}`;
-  })
+      return `${selfImport}${reactImport}`;
+    })
+    .replaceAll(exportDefaultRegex, (exportDefault, _) => {
+      const exportLine = exportDefault.indexOf('decorators:') < 0 ? exportDefault.replace('}', `${decoratorsLine},\n}`) : exportDefault
+      return `${importThemeDecoratorLine}\n\n${exportLine}`;
+    })
 
   return Promise.resolve(enhancedStory || '');
 };
