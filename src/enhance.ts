@@ -3,6 +3,7 @@ import 'regenerator-runtime/runtime';
 import { uniq, partition } from 'lodash';
 import { Doc, ComponentMeta } from './types';
 import { generateFilename } from './utils';
+var bluebird = require('bluebird');
 
 const importHeaders = `import React from 'react';
 import { mdx } from '@mdx-js/react';
@@ -31,13 +32,16 @@ const interpolatedValueRegex = /\${(.*?)}/gm;
 const emptyLineRegex = /^\s*\n/gm;
 
 const localImportTemplate = `import { $name } from "~/$dsd";`;
-const iconsImportTemplate = `import { $components } from "@chakra-ui/icons";`;
-const reactImportTemplate = `import { $components } from "@chakra-ui/react";`;
+const iconsImportTemplate = `import { $components } from "../src/index";`;
+const reactImportTemplate = `import { $components } from "../src/index";`;
 const mdImportTemplate = `import { $components } from "react-icons/md";`;
 const faImportTemplate = `import { $components } from "react-icons/fa";`;
 const aiImportTemplate = `import { $components } from "react-icons/ai";`;
 const spinnerImportTemplate = `import { $components } from "react-spinners";`;
-const inputInportTemplate = `\nimport { $components} from "@chakra-ui/input";`;
+const inputInportTemplate = `\nimport { $components} from "../src/index";`;
+
+const exportTemplate = (set: Set<string>, source: string) =>
+  `export { ${Array.from(set).join(', ')} } from '${source}';\n`
 
 const specificReactComponents = new Set<string>(['AlertIcon', 'Icon', 'ListIcon', 'AccordionIcon', 'TagLeftIcon', 'TagRightIcon']);
 const specificIconComponents = new Set<string>([]);
@@ -45,6 +49,10 @@ const specificFaComponents = new Set<string>([]);
 const specificMdComponents = new Set<string>([]);
 const specificAiComponents = new Set<string>([]);
 const specificSpinnerComponents = new Set<string>([]);
+
+const _iconImports = new Set<string>();
+const _inputImports = new Set<string>();
+const _reactImports = new Set<string>();
 
 const supportedHooksList = ['useToken', 'useTheme', 'usePrefersReducedMotion', 'useDisclosure', 'useOutsideClick',
   'useMediaQuery', 'useDisclosure', ' useControllableProp', 'useControllableState', 'useClipboard', 'useBreakpointValue'];
@@ -139,6 +147,12 @@ const createLocalImportStatement = (
 const formatH1ComponentTitle = (headerBlock: string) =>
   headerBlock && `# ${headerBlock.match(componentNameRegex)}`.replaceAll('"', '')
 
+const resetSets = () => {
+  _reactImports.clear();
+  _iconImports.clear();
+  _inputImports.clear();
+}
+
 export const enhanceDoc = (
   chakraDoc: string = '',
   docsMapMeta: ComponentMeta[]
@@ -146,10 +160,7 @@ export const enhanceDoc = (
   const mdImports = new Set<string>();
   const aiImports = new Set<string>();
   const faImports = new Set<string>();
-  const iconImports = new Set<string>();
-  const reactImports = new Set<string>();
   const spinnerImports = new Set<string>();
-  const inputImports = new Set<string>();
   const localImports = new Set<ComponentMeta>();
 
   const enhanced = chakraDoc.replace(headerRegex, (headerBlock) => formatH1ComponentTitle(headerBlock)
@@ -181,11 +192,11 @@ export const enhanceDoc = (
       else if (isFaImport(c)) faImports.add(c);
       else if (isMdImport(c)) mdImports.add(c);
       else if (isAiImports(c)) aiImports.add(c);
-      else if (isIconImport(c)) iconImports.add(c);
-      else if (isInputImport(c)) inputImports.add(c);
+      else if (isIconImport(c)) _iconImports.add(c);
+      else if (isInputImport(c)) _inputImports.add(c);
       else if (isSpinnerImport(c)) spinnerImports.add(c);
       else if (isTagImport(c) || isChakraImport(c) || isHookImport(c)
-        || isReactImport(c)) reactImports.add(c);
+        || isReactImport(c)) _reactImports.add(c);
     });
 
     return playgroundTemplate
@@ -197,9 +208,9 @@ export const enhanceDoc = (
   const doc = `${createImportStatement(faImports, faImportTemplate)}
 ${createImportStatement(mdImports, mdImportTemplate)}
 ${createImportStatement(aiImports, aiImportTemplate)}  
-${createImportStatement(iconImports, iconsImportTemplate)}
-${createImportStatement(reactImports, reactImportTemplate)}
-${createLocalImportStatement(localImports)}${createImportStatement(inputImports, inputInportTemplate)}
+${createImportStatement(_iconImports, iconsImportTemplate)}
+${createImportStatement(_reactImports, reactImportTemplate)}
+${createLocalImportStatement(localImports)}${createImportStatement(_inputImports, inputInportTemplate)}
 ${createImportStatement(spinnerImports, spinnerImportTemplate)}
 ${importHeaders}\n${enhanced}`.trim();
 
@@ -251,6 +262,7 @@ export const enhanceStory = (
       return `${importThemeDecoratorLine}\n\n${exportLine}`;
     })
 
+
   return Promise.resolve(enhancedStory || '');
 };
 
@@ -260,8 +272,14 @@ export const getComponentTsxContent = (name: string = ''): string => {
 }
 
 // /src/index.ts
-export const getIndexTsContent = (name: string = ''): string => {
-  return `export * from './${name}';`;
+export const getIndexTsContent = (name: string = ''): Promise<string> => {
+
+  const content = `export * from './${name}'\n`
+    .concat(_reactImports.size ? exportTemplate(_reactImports, '@chakra-ui/react') : '')
+    .concat(_iconImports.size ? exportTemplate(_iconImports, '@chakra-ui/icons') : '')
+    .concat(_inputImports.size ? exportTemplate(_inputImports, '@chakra-ui/input') : '');
+
+  return Promise.resolve(content);
 }
 
 // /index.js
@@ -271,14 +289,21 @@ export const getIndexJsContent = (): string => {
 
 export const enhance = async (docsMap: Doc[]): Promise<Doc[]> => {
   const docsMapMeta = docsMap.map(d => new ComponentMeta(d.dsd));
-  return Promise.all(
-    docsMap.map(async (doc: Doc) => ({
+
+  return bluebird.mapSeries(docsMap, async (doc: Doc) => {
+
+    const dsdDocContent = await enhanceDoc(doc.chakraDoc, docsMapMeta);
+    const storyDocContent = await enhanceStory(doc, docsMapMeta);
+    const indexTsContent = await getIndexTsContent(generateFilename(doc.dsd));
+    resetSets();
+
+    return ({
       ...doc,
-      dsdDoc: await enhanceDoc(doc.chakraDoc, docsMapMeta),
-      storyDoc: await enhanceStory(doc, docsMapMeta),
-      tsx: getComponentTsxContent(generateFilename(doc.dsd)),
-      indexTs: getIndexTsContent(generateFilename(doc.dsd)),
+      dsdDoc: dsdDocContent,
+      storyDoc: storyDocContent,
+      indexTs: indexTsContent,
       indexJs: getIndexJsContent(),
-    }))
-  );
+      tsx: getComponentTsxContent(generateFilename(doc.dsd)),
+    })
+  })
 }

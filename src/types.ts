@@ -24,3 +24,23 @@ export class ComponentMeta {
     this.folder = folder;
   };
 }
+
+export class ChakraComponentsImports {
+  components: Set<string>;
+  packageName: string;
+
+  constructor(components: Set<string>, packageName: string) {
+    this.components = components;
+    this.packageName = packageName;
+  };
+}
+export class ProcessedDoc {
+  content: string;
+  usedComponents!: Set<ChakraComponentsImports>;
+
+  constructor(content: string, imports: Set<ChakraComponentsImports>) {
+    this.content = content;
+    this.usedComponents = imports;
+  }
+}
+

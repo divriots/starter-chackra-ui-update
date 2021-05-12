@@ -35,6 +35,7 @@
     "typescript": "^4.2.3"
   },
   "dependencies": {
+    "bluebird": "^3.7.2",
     "core-js": "^3.9.1",
     "lodash": "^4.17.21",
     "node-fetch": "^2.6.1",
