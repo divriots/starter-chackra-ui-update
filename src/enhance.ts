@@ -274,12 +274,12 @@ export const getComponentTsxContent = (name: string = ''): string => {
 // /src/index.ts
 export const getIndexTsContent = (name: string = ''): Promise<string> => {
 
-  const content = `export * from './${name}'\n`
+  const content = `export * from './${name}';\n`
     .concat(_reactImports.size ? exportTemplate(_reactImports, '@chakra-ui/react') : '')
     .concat(_iconImports.size ? exportTemplate(_iconImports, '@chakra-ui/icons') : '')
     .concat(_inputImports.size ? exportTemplate(_inputImports, '@chakra-ui/input') : '');
 
-  return Promise.resolve(content);
+  return Promise.resolve(content.trim());
 }
 
 // /index.js
