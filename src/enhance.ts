@@ -53,6 +53,7 @@ const specificSpinnerComponents = new Set<string>([]);
 const _iconImports = new Set<string>();
 const _inputImports = new Set<string>();
 const _reactImports = new Set<string>();
+const _otherChakraImports = new Set<string>();
 
 const supportedHooksList = ['useToken', 'useTheme', 'usePrefersReducedMotion', 'useDisclosure', 'useOutsideClick',
   'useMediaQuery', 'useDisclosure', ' useControllableProp', 'useControllableState', 'useClipboard', 'useBreakpointValue'];
@@ -75,6 +76,16 @@ const ignoredChapterListRegex = ignoredChapterList.map(
 
     .replaceAll('$h', chapter.h.toString())
 ).join('|');
+
+const checkDuplicates = (chakraImportLine: string) => {
+  if (_reactImports.has('useDisclosure') && chakraImportLine.indexOf('useDisclosure') > 0) return '';
+
+  return chakraImportLine
+    .replace(_reactImports.has('Portal') ? 'Portal' : '', '')
+    .replace(_reactImports.has('HStack') ? 'HStack,' : '', '')
+    .replace(_reactImports.has('ButtonGroup') ? 'ButtonGroup' : '', '')
+    .replace('import', 'export')
+}
 
 const isIconImport = (name: string) =>
   name.endsWith('Icon') &&
@@ -151,6 +162,7 @@ const resetSets = () => {
   _reactImports.clear();
   _iconImports.clear();
   _inputImports.clear();
+  _otherChakraImports.clear();
 }
 
 export const enhanceDoc = (
@@ -218,10 +230,12 @@ ${importHeaders}\n${enhanced}`.trim();
 };
 
 const importRegex = /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:"\.\.\/src.*?")|(?:'\.\.\/src.*?'))[\s]*?(?:;|$|)/g;
+const chakraRegex = /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:"@chakra.*?")|(?:'@chakra.*?'))[\s]*?(?:;|$|)/gm;
 const themeDecoratorRegex = /import { themeDecorator } [\s\S]*?(?=;);/g;
 const exportDefaultRegex = /(export default {[\s\S]*?})/g;
 const decoratorsRegex = /(decorators: [\s\S]*?])/g;
 const importedComponentsRegex = /{[\s\S]*?}/g;
+const chakraUIRegex = /"@chakra-ui\/(.*)"/g;
 const eachComponentRegex = /(,?[\w][\w]*),?/g;
 
 const importThemeDecoratorLine = 'import { themeDecorator } from "../../story-layout/src/index";'
@@ -234,10 +248,10 @@ export const enhanceStory = (
   const { dsd, storyDoc } = doc;
   const componentName = generateFilename(dsd);
 
-  // replace all the import statements that includes the '../src' path
   const enhancedStory = storyDoc
     ?.replaceAll(themeDecoratorRegex, '')
     .replace(decoratorsRegex, decoratorsLine)
+    // replace all the import statements that includes the '../src' path
     .replaceAll(importRegex, (importLine, _) => {
 
       // sample: '{Editable, EditableInput, EditablePreview, useEditableControls}'
@@ -256,6 +270,25 @@ export const enhanceStory = (
       // });
 
       return `${selfImport}${reactImport}`;
+    })
+    // replace all the import statements that includes the '@chakra-ui/' path
+    .replaceAll(chakraRegex, (chakraImportLine, _) => {
+      const chakraPackage = (chakraImportLine.match(chakraUIRegex) || [])[0];
+      const allComponentsLine = (chakraImportLine.match(importedComponentsRegex) || [])[0];
+      const components = allComponentsLine && [...allComponentsLine.matchAll(eachComponentRegex)]
+        .map(([_, component]) => component) || [];
+
+      // add the used components into the sets
+      if (chakraPackage.includes('@chakra-ui/input')) components.forEach(c => _inputImports.add(c));
+      else if (chakraPackage.includes('@chakra-ui/icons')) components.forEach(c => _iconImports.add(c));
+      else if (chakraPackage.includes('@chakra-ui/react')) {
+        components.forEach(c => {
+          if (!_inputImports.has(c)) _reactImports.add(c)
+        });
+      }
+      else _otherChakraImports.add(checkDuplicates(chakraImportLine))
+
+      return chakraImportLine.replace(chakraPackage, '"../src/index"');
     })
     .replaceAll(exportDefaultRegex, (exportDefault, _) => {
       const exportLine = exportDefault.indexOf('decorators:') < 0 ? exportDefault.replace('}', `${decoratorsLine},\n}`) : exportDefault
@@ -277,7 +310,8 @@ export const getIndexTsContent = (name: string = ''): Promise<string> => {
   const content = `export * from './${name}';\n`
     .concat(_reactImports.size ? exportTemplate(_reactImports, '@chakra-ui/react') : '')
     .concat(_iconImports.size ? exportTemplate(_iconImports, '@chakra-ui/icons') : '')
-    .concat(_inputImports.size ? exportTemplate(_inputImports, '@chakra-ui/input') : '');
+    .concat(_inputImports.size ? exportTemplate(_inputImports, '@chakra-ui/input') : '')
+    .concat(_otherChakraImports.size ? Array.from(_otherChakraImports).join('\n') : '');
 
   return Promise.resolve(content.trim());
 }
