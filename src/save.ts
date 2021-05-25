@@ -15,8 +15,6 @@ const stories = { fileName: 'index.stories.tsx', dir: '/stories' };
 
 const saveDoc = async (doc: Doc): Promise<boolean> => {
   try {
-    // console.log('-------> ' + doc.storyDoc);
-
     const tsxPath = path.join(basePath, doc.dsd, component.dir);
     await fs.mkdir(tsxPath, { recursive: true });
     await fs.writeFile(path.join(tsxPath, component.fileName.replace('${name}', generateFilename(doc.dsd))), doc.tsx || '');
