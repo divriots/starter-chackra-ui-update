@@ -239,7 +239,7 @@ const chakraUIRegex = /"@chakra-ui\/(.*)"/g;
 const eachComponentRegex = /(,?[\w][\w]*),?/g;
 
 const importThemeDecoratorLine = 'import { themeDecorator } from "../../story-layout/src/index";'
-const decoratorsLine = 'decorators: [themeDecorator]';
+const decoratorsLine = `decorators: [themeDecorator],\n  parameters: {\n    layout: 'centered',\n  }`;
 
 export const enhanceStory = (
   doc: Doc,
@@ -291,7 +291,7 @@ export const enhanceStory = (
       return chakraImportLine.replace(chakraPackage, '"../src/index"');
     })
     .replaceAll(exportDefaultRegex, (exportDefault, _) => {
-      const exportLine = exportDefault.indexOf('decorators:') < 0 ? exportDefault.replace('}', `${decoratorsLine},\n}`) : exportDefault
+      const exportLine = exportDefault.indexOf('decorators:') < 0 ? exportDefault.replace('}', `${decoratorsLine},\n}`) : exportDefault;
       return `${importThemeDecoratorLine}\n\n${exportLine}`;
     })
 
